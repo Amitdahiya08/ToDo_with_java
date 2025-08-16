@@ -19,44 +19,42 @@ public class TodoController {
         this.todoService = todoService;
     }
 
-    // Get all todos
+    // Get all todos (USER gets own; ADMIN gets all)
     @GetMapping
     public List<Todo> getAllTodos() {
         return todoService.getAllTodos();
     }
 
-    // Get todo by id
+    // Get todo by id (must own it unless ADMIN)
     @GetMapping("/{id}")
     public ResponseEntity<Todo> getTodoById(@PathVariable Long id) {
         return todoService.getTodoById(id)
-                .map(todo -> ResponseEntity.ok(todo))
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Create new todo
+    // Create new todo (owner set from JWT)
     @PostMapping
     public ResponseEntity<Todo> createTodo(@RequestBody Todo todo) {
-        Todo saved = todoService.saveTodo(todo);
+        Todo saved = todoService.createTodo(todo);
         return new ResponseEntity<>(saved, HttpStatus.CREATED);
     }
 
-    // Update existing todo
+    // Update existing todo (must own it unless ADMIN)
     @PutMapping("/{id}")
     public ResponseEntity<Todo> updateTodo(@PathVariable Long id, @RequestBody Todo todo) {
-        return todoService.getTodoById(id)
-                .map(existing -> {
-                    existing.setTitle(todo.getTitle());
-                    existing.setCompleted(todo.isCompleted());
-                    Todo updated = todoService.saveTodo(existing);
-                    return ResponseEntity.ok(updated);
-                })
+        return todoService.updateTodo(id, todo)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Delete todo
+    // Delete todo (must own it unless ADMIN)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTodo(@PathVariable Long id) {
-        todoService.deleteTodo(id);
+        boolean deleted = todoService.deleteTodo(id);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
         return ResponseEntity.noContent().build();
     }
 }
